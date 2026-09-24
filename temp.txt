@@ -42,8 +42,8 @@
    6. It compares the entered password with the stored hashed password using bcrypt
    7. If valid, a session is created
    8. The user is sent back to /
-   9. The home page now renders and shows the user's name/email
-   10. Clicking Logout clears the session and sends the user back to /login
+   9. The home page now renders the IncidentHub landing copy plus the current signed-in session
+   10. Clicking Sign out clears the session and sends the user back to /login
 
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -210,7 +210,8 @@
    - If there is no session, redirects to /login
    - If there is a session, renders:
     - Header
-    - a welcome message using session.user?.name ?? session.user?.email
+    - an IncidentHub intro block
+    - a session summary using session.user?.name ?? session.user?.email
 
   This is your current route protection strategy:
 
@@ -412,13 +413,13 @@
 
   Planned but not implemented yet
 
-  From docs/architecture.md, you still intend to add:
+  From docs/architecture.md, the near-term direction is:
 
-   - dashboard
-   - test cases
-   - distributions
-   - test executions
-   - issues
+   - authentication and access control
+   - incident intake and storage
+   - incident detail and investigation history
+   - search across historical incidents
+   - knowledge-oriented resolution records
 
   So the current code is mainly the foundation layer of the future app.
 
