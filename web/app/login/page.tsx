@@ -14,9 +14,9 @@ export default async function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md items-center px-6">
       <div className="w-full rounded-2xl border p-6 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Login</h1>
+          <h1 className="text-2xl font-semibold">Welcome to IncidentHub</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in with your credentials
+            Sign in to access the incident knowledge base.
           </p>
         </div>
 

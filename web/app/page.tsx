@@ -13,12 +13,22 @@ export default async function HomePage() {
   return (
     <>
       <Header />
-      <main className="p-6">
-        <h1 className="text-2xl font-semibold">TestBoard</h1>
-        <p className="text-sm text-muted-foreground">
-          Welcome, {session.user?.name ?? session.user?.email}
-        </p>
+      <main className="space-y-4 p-6">
+        <div>
+          <h1 className="text-2xl font-semibold">IncidentHub</h1>
+          <p className="text-sm text-muted-foreground">
+            Capture incident context, investigations, and resolutions in one
+            place.
+          </p>
+        </div>
+
+        <section className="space-y-2 rounded-xl border p-4">
+          <h2 className="text-sm font-medium">Session</h2>
+          <p className="text-sm text-muted-foreground">
+            Signed in as {session.user?.name ?? session.user?.email}
+          </p>
+        </section>
       </main>
     </>
   );
-} 
+}

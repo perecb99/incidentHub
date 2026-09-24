@@ -4,22 +4,22 @@ import bcrypt from "bcrypt";
 async function main() {
   const hashedPassword = await bcrypt.hash("admin123", 10);
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@testboard.com" },
+  const adminUser = await prisma.user.upsert({
+    where: { email: "admin@incidenthub.local" },
     update: {
-      name: "Admin",
+      name: "IncidentHub Admin",
       passwordHash: hashedPassword,
       role: "ADMIN",
     },
     create: {
-      email: "admin@testboard.com",
-      name: "Admin",
+      email: "admin@incidenthub.local",
+      name: "IncidentHub Admin",
       passwordHash: hashedPassword,
       role: "ADMIN",
     },
   });
 
-  console.log("✅ Admin user seeded:", admin);
+  console.log("Seeded IncidentHub admin user:", adminUser);
 }
 
 main()

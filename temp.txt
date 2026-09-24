@@ -1,0 +1,446 @@
+● Your code is a small authenticated Next.js app. Right now it does one complete flow: connect to PostgreSQL with Prisma, authenticate users with email/password, redirect unauthenticated users to /login, and
+  let authenticated users enter the home page and log out.
+
+  The project structure
+
+  There are really two levels:
+
+   - Repo root: project docs like README.md and docs/architecture.md
+   - web/: the actual application
+
+  Inside web/, the important parts are:
+
+  ┌─────────────────────────┬─────────────────────────────────────────┐
+  │ Path                    │ What it does                            │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ app/                    │ Next.js App Router pages and API routes │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ lib/prisma.ts           │ Shared Prisma client                    │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ prisma/schema.prisma    │ Database schema                         │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ prisma/migrations/...   │ SQL migration for the DB                │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ prisma/seed.ts          │ Seeds an admin user                     │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ prisma.config.ts        │ Prisma configuration                    │
+  ├─────────────────────────┼─────────────────────────────────────────┤
+  │ generated/prisma/       │ Generated Prisma client code            │
+  └─────────────────────────┴─────────────────────────────────────────┘
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  How the app works as a whole
+
+  The runtime flow is:
+
+   1. A user opens /
+   2. The home page checks whether there is a session
+   3. If there is no session, Next.js redirects to /login
+   4. The login form sends email/password to NextAuth
+   5. NextAuth looks up the user in PostgreSQL through Prisma
+   6. It compares the entered password with the stored hashed password using bcrypt
+   7. If valid, a session is created
+   8. The user is sent back to /
+   9. The home page now renders and shows the user's name/email
+   10. Clicking Logout clears the session and sends the user back to /login
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/layout.tsx
+
+  This is the root layout for the whole app.
+
+  What it does:
+
+   - Imports global CSS
+   - Loads the Geist fonts from next/font/google
+   - Wraps every page in the root HTML/body structure
+
+  Important detail:
+
+   - This file does not contain auth logic
+   - It is only the global shell for all pages
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/globals.css
+
+  This sets the global visual defaults.
+
+  What it does:
+
+   - Imports Tailwind CSS
+   - Defines --background and --foreground
+   - Sets light/dark values
+   - Maps the Geist font CSS variables
+   - Applies default body styles
+
+  So this is the styling baseline for every page.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/api/auth/[...nextauth]/route.ts
+
+  This is the authentication backend. It is the core of login.
+
+  What it contains:
+
+   - NextAuth
+   - CredentialsProvider
+   - bcrypt.compare
+   - prisma
+
+  authOptions
+
+  This object defines how authentication works.
+
+  It uses a credentials provider, meaning you are not using Google/GitHub login. You are using your own database and your own email/password check.
+
+  authorize(credentials)
+
+  This is the critical function.
+
+  It does:
+
+   1. Validate that email and password were provided
+   2. Query the database: prisma.user.findUnique({ where: { email: credentials.email } })
+   3. If no user exists, throw an error
+   4. Compare the plain password from the form against user.passwordHash
+   5. If the password is wrong, throw an error
+   6. If correct, return a user object with:
+    - id
+    - email
+    - name
+    - role
+
+  That returned object is what NextAuth uses to create the session.
+
+  handler
+
+   const handler = NextAuth(authOptions);
+   export { handler as GET, handler as POST };
+
+  This exposes the auth route to both GET and POST requests in the App Router style.
+
+  Why authOptions is exported
+
+  Because other server-side files reuse it with:
+
+   getServerSession(authOptions)
+
+  That way, your pages and your auth route use the same exact auth configuration.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/login/page.tsx
+
+  This is the server-rendered login page.
+
+  What it does:
+
+   - Calls getServerSession(authOptions)
+   - If the user is already logged in, it redirects to /
+   - Otherwise, it renders the login UI container and includes LoginForm
+
+  Why this matters:
+
+   - Logged-in users should not see the login page again
+   - This check happens on the server before rendering
+
+  So this file is mostly routing logic + page shell.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/login/login-form.tsx
+
+  This is the interactive client-side login form.
+
+  It is a client component because it uses:
+
+   - React state
+   - browser navigation
+   - signIn() from next-auth/react
+
+  Local state
+
+  It stores:
+
+   - email
+   - password
+   - isPending
+   - error
+
+  handleSubmit
+
+  This function runs when the form is submitted.
+
+  It does:
+
+   1. Prevent the browser's default form submission
+   2. Clear old errors
+   3. Set loading state
+   4. Call: signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
+   5. Stop loading state
+   6. If login failed, show "Invalid email or password"
+   7. If login succeeded:
+    - router.push("/")
+    - router.refresh()
+
+  Why redirect: false matters:
+
+   - You are controlling the result manually
+   - That lets you show inline errors instead of letting auth immediately redirect the browser
+
+  So this file is the UI bridge between the user and your auth backend.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/page.tsx
+
+  This is the protected home page.
+
+  What it does:
+
+   - Calls getServerSession(authOptions)
+   - If there is no session, redirects to /login
+   - If there is a session, renders:
+    - Header
+    - a welcome message using session.user?.name ?? session.user?.email
+
+  This is your current route protection strategy:
+
+   - not middleware-based
+   - page-level server protection
+
+  That means the page itself refuses to render unless the user is authenticated.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  app/components/header.tsx
+
+  This is the top bar shown on the protected page.
+
+  It is a client component because it uses:
+
+   signOut()
+
+  When the button is clicked:
+
+   signOut({ callbackUrl: "/login" })
+
+  That:
+
+   1. clears the session
+   2. sends the user back to the login page
+
+  So this file is small, but it completes the auth flow.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  lib/prisma.ts
+
+  This is your shared Prisma client setup.
+
+  It imports:
+
+   - PrismaClient from the generated client
+   - PrismaPg from @prisma/adapter-pg
+
+  Then it creates a Prisma client using DATABASE_URL.
+
+  Why the globalThis trick exists
+
+  In development, Next.js can reload modules many times. If you create a new Prisma client on every reload, you can end up with too many DB connections.
+
+  So you do this:
+
+   - check if globalForPrisma.prisma already exists
+   - reuse it if it does
+   - otherwise create a new one
+   - in non-production, cache it globally
+
+  That is the standard pattern for keeping Prisma stable in a hot-reloading app.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  prisma/schema.prisma
+
+  This defines your database schema.
+
+  Generator
+
+   generator client {
+     provider = "prisma-client"
+     output   = "../generated/prisma"
+   }
+
+  This tells Prisma to generate the client code into generated/prisma.
+
+  Datasource
+
+   datasource db {
+     provider = "postgresql"
+   }
+
+  This says the DB is PostgreSQL.
+
+  Enum
+
+   enum UserRole {
+     ADMIN
+     TESTER
+   }
+
+  This gives users a role system, even though the role is not heavily used yet.
+
+  Model
+
+   model User {
+     id           String   @id @default(cuid())
+     name         String?
+     email        String   @unique
+     passwordHash String
+     role         UserRole @default(TESTER)
+     createdAt    DateTime @default(now())
+     updatedAt    DateTime @updatedAt
+   }
+
+  This means:
+
+   - every user has a unique email
+   - passwords are stored as hashes, not plain text
+   - users get a role
+   - timestamps are automatically managed
+
+  This is the entire data model currently implemented.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  prisma/migrations/.../migration.sql
+
+  This is the SQL version of the schema change.
+
+  It creates:
+
+   - the UserRole enum
+   - the User table
+   - the unique index on email
+
+  So Prisma schema is the source definition, and this migration is the concrete SQL applied to PostgreSQL.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  prisma/seed.ts
+
+  This creates an initial admin user.
+
+  What it does:
+
+   1. Imports the shared Prisma client
+   2. Uses bcrypt.hash("admin123", 10) to hash the password
+   3. Runs prisma.user.upsert(...)
+
+  upsert means:
+
+   - if the user exists, update it
+   - if not, create it
+
+  That makes the seed script safe to run multiple times.
+
+  It seeds:
+
+   - email: admin@incidenthub.local
+   - name: IncidentHub Admin
+   - role: ADMIN
+
+  This is how your login flow has a known working user.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  prisma.config.ts
+
+  This tells Prisma where everything lives.
+
+  It sets:
+
+   - schema path
+   - migrations path
+   - seed command
+   - datasource URL from DATABASE_URL
+
+  So this file is configuration glue for Prisma CLI commands.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  generated/prisma/
+
+  This is autogenerated Prisma client code.
+
+  You generally do not edit this by hand.
+
+  Its purpose is:
+
+   - give you a typed PrismaClient
+   - provide typed access to models like prisma.user
+   - reflect your schema in generated TS code
+
+  This is why your code can do:
+
+   prisma.user.findUnique(...)
+   prisma.user.upsert(...)
+
+  with type safety.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  What is already implemented vs planned
+
+  Already implemented
+
+   - Next.js app shell
+   - Prisma/Postgres connection
+   - User database model
+   - seeded admin user
+   - credentials-based login
+   - protected home page
+   - logout
+
+  Planned but not implemented yet
+
+  From docs/architecture.md, you still intend to add:
+
+   - dashboard
+   - test cases
+   - distributions
+   - test executions
+   - issues
+
+  So the current code is mainly the foundation layer of the future app.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  The most important design choices in your code
+
+   1. Server-side route protection
+  You protect pages by calling getServerSession(authOptions) inside server components.
+   2. Credentials auth with your own DB
+  You control authentication yourself instead of using OAuth.
+   3. Hashed passwords
+  Passwords are checked securely with bcrypt.
+   4. Prisma singleton pattern
+  Prevents extra DB clients during development.
+   5. App Router split between server and client components  
+    - server components for session checks and redirects
+    - client components for interactive auth actions like signIn and signOut
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  If I describe the app in one sentence
+
+  It is a Next.js 16 App Router app where Prisma manages a PostgreSQL User table, NextAuth verifies credentials against that table, /login signs users in, / is protected by a server-side session check, and
+  the header logs users out.
