@@ -13,6 +13,21 @@ IncidentHub is intended to centralize the knowledge generated while resolving in
 
 ## Getting started
 
+### Before each start
+
+The application authenticates users against PostgreSQL hosted on Railway. Before running the development server:
+
+1. Open Railway and make sure the PostgreSQL service is running and available.
+2. Check that `DATABASE_URL` in `.env` points to that database.
+3. If a VPN or proxy is enabled, disable it or configure it to bypass the Railway database host and port. A proxy can block the PostgreSQL connection even when the app starts normally.
+4. From this directory, verify database connectivity and migration status:
+
+	```bash
+	npx prisma migrate status
+	```
+
+	Continue only when Prisma can reach the database. If it reports `P1001`, check that Railway is active and that the proxy or VPN is not blocking the connection.
+
 Install dependencies and run the development server:
 
 ```bash

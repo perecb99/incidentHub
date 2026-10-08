@@ -17,21 +17,25 @@ export default function LoginForm() {
     setError("");
     setIsPending(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setIsPending(false);
+      if (!result || result.error) {
+        setError("Invalid email or password");
+        return;
+      }
 
-    if (!result || result.error) {
-      setError("Invalid email or password");
-      return;
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("Unable to sign in right now. Please try again.");
+    } finally {
+      setIsPending(false);
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -45,9 +49,13 @@ export default function LoginForm() {
           name="email"
           type="email"
           autoComplete="email"
+          autoFocus
           required
+          disabled={isPending}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          aria-describedby={error ? "login-error" : undefined}
+          aria-invalid={error ? "true" : undefined}
           className="w-full rounded-md border px-3 py-2 text-sm"
         />
       </div>
@@ -62,13 +70,20 @@ export default function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
+          disabled={isPending}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          aria-describedby={error ? "login-error" : undefined}
+          aria-invalid={error ? "true" : undefined}
           className="w-full rounded-md border px-3 py-2 text-sm"
         />
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <p id="login-error" className="text-sm text-red-600" aria-live="polite">
+          {error}
+        </p>
+      ) : null}
 
       <button
         type="submit"

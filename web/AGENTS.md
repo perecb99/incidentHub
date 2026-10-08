@@ -41,9 +41,18 @@ Do not prematurely implement the full incident platform unless explicitly reques
 - `web/` is the executable application
 - `README.md` explains the product at repository level
 - `docs/architecture.md` captures the intended direction
-- `temp.txt` is a living session/context artifact and should only be updated intentionally
+- `temp.txt` lives at the repository root and is the living session/context artifact for decisions and useful context retained between sessions
 
 Run application, Prisma, lint, and build commands from `web/`.
+
+## Session context workflow
+
+- Always consider `../temp.txt` when a task depends on prior decisions, project history, current direction, or context from earlier sessions.
+- Read `temp.txt` before making assumptions about decisions that may already have been discussed.
+- Treat `temp.txt` as intentional project memory, not as a temporary scratch file.
+- Do not delete, truncate, or rewrite `temp.txt` unless explicitly requested.
+- Update `temp.txt` only when the user asks, at the end of a working session, or when a durable decision/context item should be preserved.
+- Keep updates concise and useful: decisions made, important constraints, current state, next steps, and unresolved questions.
 
 ## High-level engineering rules
 

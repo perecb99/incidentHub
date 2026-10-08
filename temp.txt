@@ -445,3 +445,37 @@
 
   It is a Next.js 16 App Router app where Prisma manages a PostgreSQL User table, NextAuth verifies credentials against that table, /login signs users in, / is protected by a server-side session check, and
   the header logs users out.
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  Session context convention
+
+  temp.txt is the repository-level living context file for IncidentHub. It should be considered before tasks that depend on prior decisions, project history, current direction, or context from previous sessions.
+
+  AGENTS.md now explicitly instructs agents to:
+
+   - read ../temp.txt when prior context may matter
+   - treat temp.txt as intentional project memory, not scratch
+   - avoid deleting, truncating, or rewriting it unless explicitly requested
+   - update it only when requested, at the end of a working session, or when preserving durable decisions/context
+
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  Auth hardening completed
+
+  The login/auth foundation has been cleaned up and is considered ready for the next IncidentHub domain work:
+
+   - authOptions now lives in web/lib/auth.ts instead of the NextAuth route handler
+   - app/api/auth/[...nextauth]/route.ts only creates and exports the NextAuth GET/POST handler
+   - app/page.tsx and app/login/page.tsx import authOptions from @/lib/auth
+   - credentials email is normalized with trim().toLowerCase()
+   - invalid credentials return null instead of throwing user/password-specific errors
+   - JWT/session callbacks preserve user id and role for future authorization needs
+   - web/types/next-auth.d.ts augments NextAuth Session/User/JWT types
+   - login inputs are disabled during submit and include basic aria-invalid / aria-describedby / aria-live support
+
+  Validation:
+
+   - npm run lint passed
+   - npm run build passed
+   - independent auth review found no significant issues
